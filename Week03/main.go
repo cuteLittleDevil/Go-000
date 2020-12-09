@@ -101,9 +101,9 @@ func Run(ctx context.Context, closeTask chan struct{}, stopTask func(), tasks ..
 	// 2 任务退出
 	go func() {
 		select {
-		case <-stop:
-		case <-ctx.Done():
-		case <-closeTask:
+		case <-stop: // 某个服务挂了
+		case <-ctx.Done(): // errgroup取消
+		case <-closeTask: // 其他方式取消
 		}
 		stopTask()
 	}()
