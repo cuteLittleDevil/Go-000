@@ -38,7 +38,6 @@ func main() {
 		}
 	}()
 
-	completeCh := make(chan struct{})
 	stopTask := func() {
 		if err := s1.Shutdown(context.Background()); err != nil {
 			log.Println("s1 shutdown err is ", err)
@@ -50,7 +49,6 @@ func main() {
 		log.Println("s2 close")
 		close(quit)
 		<-closeTask
-		close(completeCh)
 	}
 
 	ctx := context.Background()
@@ -71,7 +69,7 @@ func main() {
 		}
 		log.Println("模拟 s2服务挂了 等待时间为10s")
 	}
-	g := Run(ctx, closeTask, stopTask, func() error {
+	g, completeCh := Run(ctx, closeTask, stopTask, func() error {
 		return s1.ListenAndServe()
 	}, f2)
 
@@ -81,7 +79,7 @@ func main() {
 	<-completeCh
 }
 
-func Run(ctx context.Context, closeTask chan struct{}, stopTask func(), tasks ...func() error) *errgroup.Group {
+func Run(ctx context.Context, closeTask chan struct{}, stopTask func(), tasks ...func() error) (*errgroup.Group, chan struct{}) {
 	// 1 开始任务
 	g, ctx := errgroup.WithContext(ctx)
 	stop := make(chan struct{}, 1)
@@ -99,6 +97,8 @@ func Run(ctx context.Context, closeTask chan struct{}, stopTask func(), tasks ..
 		})
 	}
 	// 2 任务退出
+
+	complete := make(chan struct{})
 	go func() {
 		select {
 		case <-stop: // 某个服务挂了
@@ -106,6 +106,7 @@ func Run(ctx context.Context, closeTask chan struct{}, stopTask func(), tasks ..
 		case <-closeTask: // 其他方式取消
 		}
 		stopTask()
+		close(complete)
 	}()
-	return g
+	return g, complete
 }
