@@ -14,7 +14,11 @@ func main() {
 }
 
 func dao() error {
-	sql := ""
+	sql := "select * from week"
 	err := errors.New("sql 错误")
-	return fmt.Errorf("dao sql is: %s custom err is: %w original err is: %s", sql, ERR_SQL, err)
+	return NewDaoErr(ERR_SQL, err, fmt.Sprintf("sql is %s", sql))
+}
+
+func NewDaoErr(custom, original error, info string) error {
+	return fmt.Errorf("[info is %s] [custom err is %w] [original err is %s]", info, custom, original)
 }
