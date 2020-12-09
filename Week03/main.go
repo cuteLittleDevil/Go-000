@@ -33,6 +33,7 @@ func main() {
 	go func() {
 		select {
 		case <-quit:
+			log.Println("quit close")
 			close(closeTask)
 		}
 	}()
@@ -48,7 +49,7 @@ func main() {
 		}
 		log.Println("s2 close")
 		close(quit)
-		log.Println("quit close")
+		<-closeTask
 		close(completeCh)
 	}
 
@@ -91,7 +92,7 @@ func Run(ctx context.Context, closeTask chan struct{}, stopTask func(), tasks ..
 			err := tasks[i]()
 			if err != nil {
 				once.Do(func() {
-					stop <- struct{}{}
+					close(stop)
 				})
 			}
 			return err
@@ -105,7 +106,6 @@ func Run(ctx context.Context, closeTask chan struct{}, stopTask func(), tasks ..
 		case <-closeTask:
 		}
 		stopTask()
-		close(stop)
 	}()
 	return g
 }
